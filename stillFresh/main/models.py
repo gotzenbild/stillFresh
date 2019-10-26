@@ -5,8 +5,8 @@ class Store(models.Model):
     id_code = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
     address = models.CharField(max_length=100)
-    latitude = models.DecimalField(max_digits=10, decimal_places=6)
-    longitude = models.DecimalField(max_digits=10, decimal_places=6)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
     phone = models.CharField(max_length=100)
 
     def __str__(self):
@@ -21,13 +21,16 @@ class Store(models.Model):
 
 
 class Products(models.Model):
-    store = models.ForeignKey('Store', on_delete=models.DO_NOTHING, default=None )
+    store = models.ForeignKey('Store', on_delete=models.DO_NOTHING, default=None)
     id_code = models.CharField(max_length=100)
     tags = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
     image = models.CharField(max_length=100)
     date = models.CharField(max_length=100)
-    count = models.DecimalField(max_digits=10, decimal_places=2)
+    count = models.FloatField()
+    price = models.FloatField(default=0)
+    discount = models.FloatField(default=0)
+    discount_price = models.FloatField(default=0)
 
     def __str__(self):
         return str(self.store.id)+" "\
@@ -39,10 +42,11 @@ class Products(models.Model):
 
 
 class Wish(models.Model):
+    id_code = models.CharField(max_length=100, default="")
     category = models.CharField(max_length=100)
     date = models.CharField(max_length=100)
-    needCount = models.DecimalField(max_digits=10, decimal_places=2)
-    existCount = models.DecimalField(max_digits=10, decimal_places=2)
+    needCount = models.FloatField()
+    existCount = models.FloatField()
 
     def __str__(self):
         return str(self.id_code) + " " \
@@ -53,8 +57,7 @@ class Wish(models.Model):
 
 class Order(models.Model):
     product = models.CharField(max_length=100)
-    id_code = models.CharField(max_length=100)
-    count = models.DecimalField(max_digits=10, decimal_places=2)
+    count = models.FloatField()
     date = models.CharField(max_length=100)
     qr = models.CharField(max_length=100)
-    status = models.BooleanField(default=True)
+    status = models.BooleanField(default=False)

@@ -18,8 +18,8 @@ def create_wish_view(request, category, needCount):
         date = str(datetime.today().strftime('%Y-%m-%d'))
         products = Products.objects.filter(tags=category)
         existCount = 0
-        for p in products.caunt:
-            existCount += p
+        for p in products:
+            existCount += p.count
 
         wish = Wish(category=category, date=date, needCount=needCount, existCount=existCount)
         wish.save()
@@ -31,48 +31,63 @@ def create_wish_view(request, category, needCount):
     return JsonResponse({'answer': answer})
 
 
-# def parse_product_view(request, product_name):
-#
-#     headers = {
-#         # Request headers
-#         'Ocp-Apim-Subscription-Key': OcpApimSubscriptionKey,
-#     }
-#
-#     query = product_name
-#     offset = 0
-#     limit = 10
-#
-#     params = urllib.parse.urlencode({
-#         'query': query,
-#         'offset': offset,
-#         'limit': limit,
-#     })
-#
-#     try:
-#         conn = http.client.HTTPSConnection('dev.tescolabs.com')
-#         conn.request("GET", "/grocery/products/?query={0}&offset=0&limit=20".format(query,), "{body}",
-#                      headers)
-#         response = conn.getresponse()
-#         data = response.read()
-#         data = data.decode()
-#         data = json.loads(data)
-#         for i in range(19):
-#             res = data["uk"]["ghs"]["products"]["results"][i]
-#
-#             id_code = res["id"]
-#             tags = product_name
-#             name = res["name"]
-#             image = res["image"]
-#             date = str(datetime.today().strftime('%Y-%m-%d'))
-#             count = random.randint(0,100)
-#             product = Products(store=Store.objects.get(id=20), id_code=id_code, tags=tags, name=name, image=image, date=date, count=count)
-#             product.save()
-#             print(product)
-#         conn.close()
-#     except Exception as e:
-#         print("error : ", e )
-#
-#     return JsonResponse({})
+def create_order_view(request, product, count):
+
+    try:
+        date = str(datetime.today().strftime('%Y-%m-%d'))
+        qr = random.randint(0,100)
+        order = Order(product=product, count=count, date=date, qr=qr)
+        order.save()
+        answer = "ok"
+    except Exception as e:
+        answer = str(e)
+
+    return JsonResponse({'answer': answer})
+
+def parse_product_view(request, product_name):
+
+    headers = {
+        # Request headers
+        'Ocp-Apim-Subscription-Key': OcpApimSubscriptionKey,
+    }
+
+    query = product_name
+    offset = 0
+    limit = 10
+
+    params = urllib.parse.urlencode({
+        'query': query,
+        'offset': offset,
+        'limit': limit,
+    })
+
+    try:
+        conn = http.client.HTTPSConnection('dev.tescolabs.com')
+        conn.request("GET", "/grocery/products/?query={0}&offset=0&limit=20".format(query,), "{body}",
+                     headers)
+        response = conn.getresponse()
+        data = response.read()
+        data = data.decode()
+        data = json.loads(data)
+        for i in range(19):
+            res = data["uk"]["ghs"]["products"]["results"][i]
+            price = res["unitprice"]
+            discount = random.random(0.5, 0.95)
+            discount_price = price * discount
+            id_code = res["id"]
+            tags = product_name
+            name = res["name"]
+            image = res["image"]
+            date = str(datetime.today().strftime('%Y-%m-%d'))
+            count = random.randint(0,100)
+            product = Products(store=Store.objects.get(id=random.randint(8,28)), id_code=id_code, tags=tags, name=name, image=image, date=date, count=count)
+            product.save()
+            print(product)
+        conn.close()
+    except Exception as e:
+        print("error : ", e )
+
+    return JsonResponse({})
 
 
 
@@ -127,37 +142,61 @@ def create_wish_view(request, category, needCount):
 
 
 def store_json_view(request):
+    try:
+        stores = Store.objects.all()
+        answer = []
+        for store in stores:
+            dct = {
+                "id": store.id_code,
+                "name": store.name,
+                "address": {
+                    "text": store.address,
+                    "coordinates": {
+                        "latitude": store.latitude,
+                        "longitude": store.longitude
+                    }
+                },
+                "phone": store.phone
+            }
+            products = Products.objects.filter(store=store)
 
-    return JsonResponse({
-                        "id": "4730c2b7-c46b-426b-bf1c-64d3fa55c0a8",
-                        "name": "Astoria Expressz",
-                        "address": {
-                            "text": "Rákóczi út 1-3.",
-                            "coordinates": {
-                                "latitude": 47.495165,
-                                "longitude": 19.062358
-                            }
-                        },
-                        "phone": "",
-                        "products": {
-                            "id": "253555203",
-                            "name": "Tesco Bananas Loose",
-                            "image": "http://img.tesco.com/Groceries/pi/000/0261480000000/IDShot_90x90.jpg",
-                            "date": "Fri, 25 Oct 2019 21:13:39 GMT",
-                            "count": "3"
-                        }
-    })
+            product_list = []
+            for product in products:
+                product_list.append(
+                    {
+                        "id": product.id_code,
+                        "name": product.name,
+                        "image": product.image,
+                        "date": product.date,
+                        "count": product.count,
+                    }
+                )
+                dct.update({'products': product_list })
+            answer.append(dct)
+    except Exception as e:
+        print(e)
+
+    return JsonResponse(answer,safe=False)
 
 def product_json_view(request):
 
-    return JsonResponse({
-            "id": "253555203",
-            "store": "Store",
-            "name": "Tesco Bananas Loose",
-            "image": "http://img.tesco.com/Groceries/pi/000/0261480000000/IDShot_90x90.jpg",
-            "date": "Fri, 25 Oct 2019 21:13:39 GMT",
-            "count": "3"
-    })
+    products = Products.objects.all()
+    answer = []
+    for product in products:
+        answer.append(
+            {
+                "id": product.id_code,
+                "store": product.store.id,
+                "name": product.name,
+                "image": product.image,
+                "date": product.date,
+                "count": product.count,
+                "price": product.price,
+                "discount": product.discount,
+                "discount_price": product.discount_price
+            }
+        )
+    return JsonResponse(answer,safe=False)
 
 def wish_json_view(request):
     return JsonResponse({
@@ -172,7 +211,13 @@ def order_json_view(request):
     return JsonResponse({
         "id": "",
         "content": {
-            "product": "Product",
+            "product": {
+                            "id": "253555203",
+                            "name": "Tesco Bananas Loose",
+                            "image": "http://img.tesco.com/Groceries/pi/000/0261480000000/IDShot_90x90.jpg",
+                            "date": "Fri, 25 Oct 2019 21:13:39 GMT",
+                            "count": "3"
+                        },
             "count": "1",
         },
         "date": "",
