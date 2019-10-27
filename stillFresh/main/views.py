@@ -16,41 +16,46 @@ OcpApimSubscriptionKey = "936f1583b9384f7c83ce87e539210f3a"
 #     p.save()
 
 
+for p in Products.objects.filter(tags="sausage"):
+    p.tags = "sausage;meat;pork;"
+    p.save()
+
+for p in Products.objects.filter(tags="bread"):
+    p.tags = "bread;white bread;farmhouse;warburtons"
+    p.save()
 def check_products_for_wish():
     wishes = Wish.objects.all()
     for wish in wishes:
         products = Products.objects.all()
         need = wish.needCount
-        order = Order(count=need, date=email.utils.formatdate(usegmt=True), qr="")
-        order.save()
+        good= []
         for product in products:
-            if wish.category in product.tags and need!=0:
+            if (wish.category.lower() in product.tags.lower() or wish.category.lower() in product.name.lower()) and need != 0:
+                good.append(product)
                 if need <= product.count:
-                    order_product = Order_p(order=order, product_id=product.id_code, qty=need)
-                    order_product.save()
                     need = 0
                 else:
-                    need-=product.count
-                    order_product = Order_p(order=order, product_id=product.id_code, qty=product.count)
-                    order_product.save()
-            if need == 0:
-                device = FCMDevice.objects.all()[2]
-                order.save()
+                    need -= product.count
 
+            if need == 0:
+                order = Order(count=need, date=email.utils.formatdate(usegmt=True), qr="")
+                order.save()
+                for product in good :
+                    order_product = Order_p(order=order, product_id=product.id_code, qty=need)
+                    order_product.save()
+
+                device = FCMDevice.objects.all()[2]
                 orders_p = Order_p.objects.filter(order=order)
                 i = 1
                 answer = ""
                 for order_p in orders_p:
-                    answer += "{0}. {1} | qty : {2}\n".format(i, Products.objects.filter(id_code=order_p.product_id), order_p.qty)
+                    answer += "{0}. {1} | qty : {2}\n".format(i, Products.objects.filter(id_code=order_p.product_id)[0].name, order_p.qty)
                 device.send_message(title="Your order is ready!",
                                     body=answer,
                                     )
+                wish.save()
                 wish.delete()
-            else:
-                for o in Order_p.objects.filter(order=order):
-                    o.delete()
-                order.save()
-                order.delete()
+
 
 def timeCheck ():
     while True:
@@ -167,7 +172,7 @@ def parse_product_view(request, product_name):
                            price=price,
                            discount=discount,
                            discount_price=discount_price)
-        # product.save()
+        product.save()
 
     conn.close()
     return JsonResponse({})
@@ -344,21 +349,21 @@ def order_json_view(request):
         product_list = []
 
         for order_p in orders_p:
-            try:
-                product = Products.objects.get(id_code=order_p.product_id)
-                product_list.append({
-                    "product":{
-                        "id": product.id_code,
-                        "name": product.name,
-                        "image": product.image,
-                        "date": product.date,
-                        "count": order_p.qty
-                    },
-                    "count": order.count,
-                    "store": product.store.name
-                })
-            except:
-                pass
+
+            product = Products.objects.filter(id_code=order_p.product_id)[0]
+            print(product)
+            product_list.append({
+                "product":{
+                    "id": product.id_code,
+                    "name": product.name,
+                    "image": product.image,
+                    "date": product.date,
+                    "count": order_p.qty
+                },
+                "count": order.count,
+                "store": product.store.name
+            })
+
 
         dct = {
             "id": order.id,
