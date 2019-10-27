@@ -38,10 +38,21 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'main',
+    'fcm_django'
 
 ]
 
-
+FCM_DJANGO_SETTINGS = {
+         # default: _('FCM Django')
+        "FCM_SERVER_KEY": "AAAAtWC8_uo:APA91bEgHnFs1svsdUR9I6SMkgCa_ycrURXCi65DsBtEHTABMraXw3RWuiBIO5K7x_CdMmgiAjgASUX_UAokb3FaswRQ-Ovk4w1SKnPRCW921s4roQabLsRjpgpbPJ-xejegjQyEF-oJ",
+         # true if you want to have only one active device per registered user at a time
+         # default: False
+        "ONE_DEVICE_PER_USER": False,
+         # devices to which notifications cannot be sent,
+         # are deleted upon receiving error response from FCM
+         # default: False
+        "DELETE_INACTIVE_DEVICES": False,
+}
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

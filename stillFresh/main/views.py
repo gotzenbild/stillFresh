@@ -7,6 +7,7 @@ from main.models import Store, Products, Wish, Order, Order_p
 import json
 import hashlib
 import email.utils
+from fcm_django.models import FCMDevice
 
 OcpApimSubscriptionKey = "936f1583b9384f7c83ce87e539210f3a"
 
@@ -14,16 +15,16 @@ OcpApimSubscriptionKey = "936f1583b9384f7c83ce87e539210f3a"
 #     p.qr = hashlib.md5((email.utils.formatdate(usegmt=True)+ str(p.id)).encode('utf-8'))
 #     p.save()
 
+
 def check_products_for_wish():
     wishes = Wish.objects.all()
-
     for wish in wishes:
         products = Products.objects.all()
         need = wish.needCount
         order = Order(count=need, date=email.utils.formatdate(usegmt=True), qr="")
         order.save()
         for product in products:
-            if wish.category in product.tags:
+            if wish.category in product.tags and need!=0:
                 if need <= product.count:
                     order_product = Order_p(order=order, product_id=product.id_code, qty=need)
                     order_product.save()
@@ -33,8 +34,18 @@ def check_products_for_wish():
                     order_product = Order_p(order=order, product_id=product.id_code, qty=product.count)
                     order_product.save()
             if need == 0:
+                device = FCMDevice.objects.all()[2]
+                order.save()
+
+                orders_p = Order_p.objects.filter(order=order)
+                i = 1
+                answer = ""
+                for order_p in orders_p:
+                    answer += "{0}. {1} | qty : {2}\n".format(i, Products.objects.filter(id_code=order_p.product_id), order_p.qty)
+                device.send_message(title="Your order is ready!",
+                                    body=answer,
+                                    )
                 wish.delete()
-                break
             else:
                 for o in Order_p.objects.filter(order=order):
                     o.delete()
@@ -128,7 +139,6 @@ def parse_product_view(request, product_name):
     data = data.decode()
     data = json.loads(data)
     products = Products.objects.all()
-    print(data)
     for i in range(limit):
         res = data["uk"]["ghs"]["products"]["results"][i]
         price = 0
@@ -191,7 +201,6 @@ def parse_store_view(request):
         data = json.loads(data)
         for i in range(limit):
             res = data["results"][i]["location"]
-            print(res)
             id_code = res["id"]
             name = res["name"]
             name = name.replace("TESCO", "")
@@ -201,11 +210,10 @@ def parse_store_view(request):
             phone = res["contact"]["phoneNumbers"][0]["number"]
 
             store = Store(id_code=id_code, name=name, address=address, latitude=latitude, longitude=longitude, phone=phone)
-            print(store)
             store.save()
 
         conn.close()
-        print(store)
+
     except Exception as e:
         print('error', e)
 
