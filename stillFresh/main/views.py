@@ -20,7 +20,7 @@ def check_products_for_wish():
     for wish in wishes:
         products = Products.objects.all()
         need = wish.needCount
-        order = Order(count=need, date=email.utils.formatdate(usegmt=True) ,qr="")
+        order = Order(count=need, date=email.utils.formatdate(usegmt=True), qr="")
         order.save()
         for product in products:
             if wish.category in product.tags:
@@ -38,6 +38,7 @@ def check_products_for_wish():
             else:
                 for o in Order_p.objects.filter(order=order):
                     o.delete()
+                order.save()
                 order.delete()
 
 def timeCheck ():
