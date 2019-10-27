@@ -42,22 +42,25 @@ class Products(models.Model):
 
 
 class Wish(models.Model):
-    id_code = models.CharField(max_length=100, default="")
     category = models.CharField(max_length=100)
     date = models.CharField(max_length=100)
     needCount = models.FloatField()
     existCount = models.FloatField()
 
     def __str__(self):
-        return str(self.id_code) + " " \
-               + str(self.category) + " " \
+        return str(self.category) + " " \
                + str(self.date) + " " \
                + str(self.needCount) + " " \
                + str(self.existCount)
 
+
 class Order(models.Model):
-    product = models.CharField(max_length=100)
     count = models.FloatField()
     date = models.CharField(max_length=100)
     qr = models.CharField(max_length=100)
-    status = models.BooleanField(default=False)
+    status = models.CharField(max_length=50, default="NEW")
+
+class Order_p(models.Model):
+    order = models.ForeignKey('Order', on_delete=models.DO_NOTHING, default=None)
+    product_id = models.CharField(max_length=100)
+    qty = models.FloatField()
